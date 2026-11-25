@@ -57,21 +57,48 @@ let
       (toString cfg.submenuEntries)
     ];
 
+  # The icon rEFInd looks for in EFI/refind/icons/ for each tool.
+  toolIcons = {
+    about = "func_about";
+    apple_recovery = "tool_apple_rescue";
+    bootorder = "func_bootorder";
+    exit = "func_exit";
+    firmware = "func_firmware";
+    fwupdate = "tool_fwupdate";
+    gdisk = "tool_part";
+    hidden_tags = "func_hidden";
+    install = "func_install";
+    memtest = "tool_memtest";
+    mok_tool = "tool_mok_tool";
+    netboot = "tool_netboot";
+    reboot = "func_reset";
+    shell = "tool_shell";
+    shutdown = "func_shutdown";
+    windows_recovery = "tool_windows_rescue";
+  };
+
+  # rEFInd's built-in tool list has 12 slots, and rEFInd 0.14.2 (as nixpkgs
+  # builds it) keeps the built-in tool in every slot a showtools line doesn't
+  # fill, so the defaults show up after the chosen tools. Filling the rest
+  # with csr_rotate, which only appears on a Mac with csr_values set, leaves
+  # just the chosen tools, or none.
+  showTools =
+    cfg.host.tools ++ lib.genList (_: "csr_rotate") (lib.max 0 (12 - lib.length cfg.host.tools));
+
   refindConfHeader = pkgs.writeText "refind.conf-header" ''
     timeout ${toString cfg.host.timeout}
     scanfor manual
+    showtools ${lib.concatStringsSep "," showTools}
     ${
       if cfg.host.debug then
         ''
-          # Debugging: rEFInd's own banner, hints and tools stay, and it logs
+          # Debugging: rEFInd's own banner, hints and badges stay, and it logs
           # to EFI/refind/refind.log.
           log_level 2
         ''
       else
         ''
-          # No tools row, and none of rEFInd's own banner, hints or badges:
-          # just the boot icons.
-          showtools
+          # None of rEFInd's own banner, hints or badges: just the icons.
           hideui banner,hints,badges,arrows
         ''
     }
@@ -234,10 +261,26 @@ in
         '';
       };
 
+      tools = mkOption {
+        type = types.listOf (types.enum (lib.attrNames toolIcons));
+        default = [
+          "about"
+          "shutdown"
+          "reboot"
+          "firmware"
+        ];
+        description = ''
+          rEFInd's tools in the row under the boot icons, in order, or none at
+          all. Their icons are put on the ESP. Tools that need a program rEFInd
+          doesn't ship, such as shell or memtest, only appear if that program
+          is there.
+        '';
+      };
+
       debug = mkOption {
         type = types.bool;
         default = false;
-        description = "Whether rEFInd shows its own banner, hints and tools, and logs to EFI/refind/refind.log.";
+        description = "Whether rEFInd shows its own banner, hints and badges, and logs to EFI/refind/refind.log.";
       };
     };
 
@@ -270,6 +313,12 @@ in
           "efi/refind/refind_x64.efi" = "${pkgs.refind}/share/refind/refind_x64.efi";
         }
         // lib.mapAttrs' (name: icon: lib.nameValuePair "efi/refind/icons/${name}.png" icon) cfg.host.icons
+        // lib.listToAttrs (
+          map (
+            tool:
+            lib.nameValuePair "efi/refind/icons/${toolIcons.${tool}}.png" "${pkgs.refind}/share/refind/icons/${toolIcons.${tool}}.png"
+          ) cfg.host.tools
+        )
       );
 
       extraEntries = mkIf (cfg.role == "host" && !cfg.host.bootFirst) {

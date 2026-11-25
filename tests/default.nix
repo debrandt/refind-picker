@@ -170,6 +170,7 @@ in
     "--volume 11111111-1111-1111-1111-111111111111"
     "--limit 5"
     "efibootmgr -q -o"
+    "showtools about,shutdown,reboot,firmware,csr_rotate,csr_rotate,csr_rotate,csr_rotate,csr_rotate,csr_rotate,csr_rotate,csr_rotate"
     "hideui banner,hints,badges,arrows"
     "timeout 15"
   ];
@@ -185,11 +186,16 @@ in
   # logs.
   host-trying-script = scriptHas "host-trying-script" hostTrying [ "log_level 2" ];
 
-  # The host puts rEFInd and its icons on its ESP, and adds a systemd-boot
-  # entry for rEFInd only while trying it out; the guest adds neither.
+  # The host puts rEFInd, its icons and its tools' icons on its ESP, and adds
+  # a systemd-boot entry for rEFInd only while trying it out; the guest adds
+  # neither.
   host-files =
     assert
       builtins.attrNames host.boot.loader.systemd-boot.extraFiles == [
+        "efi/refind/icons/func_about.png"
+        "efi/refind/icons/func_firmware.png"
+        "efi/refind/icons/func_reset.png"
+        "efi/refind/icons/func_shutdown.png"
         "efi/refind/icons/main.png"
         "efi/refind/refind_x64.efi"
       ];

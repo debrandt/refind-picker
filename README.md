@@ -198,7 +198,8 @@ All options are under `boot.loader.refind-picker`.
 | `host.guestFallback` | `""` | rEFInd entries to put in `guestConf` until the guest writes its own. |
 | `host.extraEntries` | `""` | rEFInd entries after the NixOS ones, such as Windows. |
 | `host.bootFirst` | `true` | Make the firmware boot rEFInd first on every rebuild. When `false`, the boot order is left alone, and systemd-boot gets an entry that starts rEFInd. |
-| `host.debug` | `false` | Show rEFInd's banner, hints and tools, and log to `EFI/refind/refind.log`. |
+| `host.tools` | `[ "about" "shutdown" "reboot" "firmware" ]` | rEFInd's tools in the row under the boot icons, in order. `[ ]` hides the row. Their icons are put on the ESP. |
+| `host.debug` | `false` | Show rEFInd's banner, hints and badges, and log to `EFI/refind/refind.log`. |
 | `guest.confName` | `"guest.conf"` | File in the host's `EFI/refind/` to write this install's entry to. Must match the host's `guestConf`. |
 
 The host's menu entry is the default selection. The firmware boot order is only changed when
@@ -263,6 +264,20 @@ Also check that the guest's `guest.confName` matches the host's `host.guestConf`
 The generator skips entries rEFInd can't express, and prints a `skipping …` warning during the rebuild. That happens
 when an entry has more than one `initrd` line, or when its kernel options contain a `"`. Older generations past
 `submenuEntries` are still in systemd-boot's own menu (see below).
+
+### Yellow-and-black striped squares instead of icons
+
+That is rEFInd's placeholder for an icon it can't find in `EFI/refind/icons/`. The module installs the icons for your
+own entries (`host.icons`) and for the tools in `host.tools`. If you name an icon in `host.extraEntries` or
+`host.guestFallback`, add it to `host.icons`. If a tool still shows stripes, rEFInd added a tool that isn't in
+`host.tools`. List it there.
+
+### Tools appear twice, or tools you didn't ask for appear
+
+rEFInd 0.14.2, as nixpkgs builds it, keeps its built-in tool list (About, Shut down, Reboot, Firmware setup and
+others) in every slot a `showtools` line doesn't fill, so they appear after the tools you chose. A bare `showtools`
+line hides nothing. The module fills the remaining slots with `csr_rotate`, a tool that only appears on a Mac with
+`csr_values` set, so only `host.tools` shows. If you write your own `showtools` line, fill all 12 slots the same way.
 
 ### Getting back to systemd-boot
 
